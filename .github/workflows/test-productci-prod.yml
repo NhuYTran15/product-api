@@ -1,0 +1,98 @@
+name: Test Product CI Prod
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-product-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ ping: 1 }).ok'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      NODE_ENV: production
+      PORT: 3000
+      MONGODB_URI: mongodb://127.0.0.1:27017/product_ci
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --omit=dev
+
+      - name: Start Product API
+        run: |
+          npm start > product-api.log 2>&1 &
+          echo $! > product-api.pid
+
+      - name: Check API and MongoDB health
+        run: |
+          for attempt in {1..15}; do
+            if curl --fail --silent http://127.0.0.1:3000/api/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
+
+      - name: Test Product CRUD
+        run: |
+          set -euo pipefail
+          api_url="http://127.0.0.1:3000/api/products"
+
+          curl --fail --silent --show-error \
+            --request POST "$api_url" \
+            --header "Content-Type: application/json" \
+            --data '{"pid":"CI001","pname":"CI Product","price":100,"quantity":5}' \
+            | jq -e '.data.pid == "CI001"'
+
+          curl --fail --silent --show-error "$api_url" \
+            | jq -e '.data | any(.pid == "CI001")'
+
+          curl --fail --silent --show-error "$api_url/CI001" \
+            | jq -e '.data.pname == "CI Product"'
+
+          curl --fail --silent --show-error \
+            --request PUT "$api_url/CI001" \
+            --header "Content-Type: application/json" \
+            --data '{"pname":"Updated CI Product","price":200,"quantity":10}' \
+            | jq -e '.data.pname == "Updated CI Product" and .data.price == 200 and .data.quantity == 10'
+
+          curl --fail --silent --show-error \
+            --request DELETE "$api_url/CI001" \
+            | jq -e '.data.pid == "CI001"'
+
+          status_code=$(curl --silent --output /dev/null --write-out "%{http_code}" "$api_url/CI001")
+          test "$status_code" = "404"
+
+      - name: Show API logs on failure
+        if: failure()
+        run: cat product-api.log
+
+      - name: Stop Product API
+        if: always()
+        run: kill "$(cat product-api.pid)" || true
