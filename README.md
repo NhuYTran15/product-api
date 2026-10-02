@@ -204,8 +204,9 @@ Job sau chỉ chạy khi job trước thành công. Các lần `deploy-local` đ
 
 ### Chuẩn bị Docker Hub và GitHub Secrets
 
-Tạo repository tên `product-api` trên Docker Hub. Repository có thể public hoặc
-private vì workflow đăng nhập Docker Hub ở cả job push và job deploy.
+Tạo public repository tên `product-api` trên Docker Hub. Workflow đăng nhập
+Docker Hub trong job `push-image`; runner local có thể pull public image mà không
+cần lưu Docker Hub credential vào macOS Keychain.
 
 Trong GitHub repository, mở **Settings > Secrets and variables > Actions > New
 repository secret**, sau đó tạo:
