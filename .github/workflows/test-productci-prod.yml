@@ -59,35 +59,8 @@ jobs:
           done
           exit 1
 
-      - name: Test Product CRUD
-        run: |
-          set -euo pipefail
-          api_url="http://127.0.0.1:3000/api/products"
-
-          curl --fail --silent --show-error \
-            --request POST "$api_url" \
-            --header "Content-Type: application/json" \
-            --data '{"pid":"CI001","pname":"CI Product","price":100,"quantity":5}' \
-            | jq -e '.data.pid == "CI001"'
-
-          curl --fail --silent --show-error "$api_url" \
-            | jq -e '.data | any(.pid == "CI001")'
-
-          curl --fail --silent --show-error "$api_url/CI001" \
-            | jq -e '.data.pname == "CI Product"'
-
-          curl --fail --silent --show-error \
-            --request PUT "$api_url/CI001" \
-            --header "Content-Type: application/json" \
-            --data '{"pname":"Updated CI Product","price":200,"quantity":10}' \
-            | jq -e '.data.pname == "Updated CI Product" and .data.price == 200 and .data.quantity == 10'
-
-          curl --fail --silent --show-error \
-            --request DELETE "$api_url/CI001" \
-            | jq -e '.data.pid == "CI001"'
-
-          status_code=$(curl --silent --output /dev/null --write-out "%{http_code}" "$api_url/CI001")
-          test "$status_code" = "404"
+      - name: Run Product API CI test script
+        run: npm run test:ci
 
       - name: Show API logs on failure
         if: failure()

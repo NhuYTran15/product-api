@@ -183,6 +183,28 @@ MongoDB tự tạo `_id`. Mongoose tự quản lý thêm `createdAt` và `update
 
 ## 8. CI/CD với Docker Hub
 
+### Test script dùng trong CI
+
+File `scripts/ci-api-test.js` kiểm tra healthcheck và toàn bộ luồng CRUD, bao gồm
+cả dữ liệu không hợp lệ, `pid` trùng và phản hồi `404`. Script tạo `pid` riêng
+cho mỗi lần chạy và tự dọn dữ liệu nếu test thất bại.
+
+Khi API và MongoDB đang chạy, có thể chấm trực tiếp từ CLI bằng lệnh:
+
+```bash
+npm run test:ci
+```
+
+Để kiểm thử một địa chỉ khác, truyền biến `API_BASE_URL`:
+
+```bash
+API_BASE_URL=http://127.0.0.1:3001 npm run test:ci
+```
+
+Workflow `.github/workflows/test-productci-prod.yml` tự khởi động MongoDB và API,
+chạy lệnh `npm run test:ci` trên mỗi lần push/pull request, in log khi có lỗi và
+dừng tiến trình API sau khi hoàn tất.
+
 Workflow `.github/workflows/cd-dockerhub.yml` tự động chạy khi có code được push
 lên nhánh `main` hoặc khi được chạy thủ công bằng `workflow_dispatch`.
 
