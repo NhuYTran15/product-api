@@ -12,6 +12,7 @@ services:
       start_period: 10s
 
   product-api:
+    container_name: product-api
     build:
       context: .
       dockerfile: Dockerfile
