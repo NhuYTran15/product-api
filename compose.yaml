@@ -1,5 +1,6 @@
 services:
   mongodb:
+    container_name: nammongodb
     image: mongo:7
     restart: unless-stopped
     volumes:
