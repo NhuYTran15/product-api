@@ -8,7 +8,9 @@ async function connectDatabase() {
   }
 
   await mongoose.connect(mongoUri);
-  console.log('Connected to MongoDB successfully');
+
+  const { host, name } = mongoose.connection;
+  console.log(`Connected to MongoDB successfully (${host}/${name})`);
 }
 
 module.exports = connectDatabase;

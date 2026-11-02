@@ -58,7 +58,9 @@ async function run() {
     const body = await request(`${apiBaseUrl}/api/health`);
     assert.equal(body.status, 'healthy');
     assert.equal(body.services.api, 'healthy');
-    assert.equal(body.services.mongodb, 'healthy');
+    assert.equal(body.services.mongodb.status, 'healthy');
+    assert.ok(body.services.mongodb.host);
+    assert.ok(body.services.mongodb.database);
   });
 
   await check('POST /api/products creates a product', async () => {

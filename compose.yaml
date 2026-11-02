@@ -23,7 +23,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      MONGODB_URI: mongodb://mongodb:27017/product_db
+      # Use the explicit container name so it is clear that every API request
+      # handled by this Compose stack is persisted in `nammongodb`.
+      MONGODB_URI: mongodb://nammongodb:27017/product_db
     depends_on:
       mongodb:
         condition: service_healthy

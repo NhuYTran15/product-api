@@ -35,12 +35,14 @@ Xem log API:
 docker compose logs -f product-api
 ```
 
-API mặc định được truy cập tại `http://localhost:3000`. MongoDB chỉ được truy cập trong Docker network qua hostname `mongodb`, không publish cổng database ra máy host.
+API được truy cập tại `http://localhost:<PORT>`; với `.env.example`, địa chỉ là
+`http://localhost:3002`. MongoDB chỉ được truy cập trong Docker network qua
+container `nammongodb`, không publish cổng database ra máy host.
 
 Kiểm tra API:
 
 ```bash
-curl http://localhost:3000/api/health
+curl http://localhost:3002/api/health
 ```
 
 Khi Product API hoạt động và MongoDB đã kết nối, API trả về mã `200`:
@@ -50,7 +52,11 @@ Khi Product API hoạt động và MongoDB đã kết nối, API trả về mã 
   "status": "healthy",
   "services": {
     "api": "healthy",
-    "mongodb": "healthy"
+    "mongodb": {
+      "status": "healthy",
+      "host": "nammongodb",
+      "database": "product_db"
+    }
   }
 }
 ```
@@ -64,7 +70,9 @@ trả về mã `503`:
   "status": "unhealthy",
   "services": {
     "api": "healthy",
-    "mongodb": "unhealthy"
+    "mongodb": {
+      "status": "unhealthy"
+    }
   }
 }
 ```
@@ -85,7 +93,7 @@ docker compose down -v
 
 - Service `product-api` được build từ `Dockerfile` và chạy bằng Node.js production.
 - Service `mongodb` sử dụng image `mongo:7` và lưu dữ liệu trong named volume `mongodb_data`.
-- API kết nối database bằng URI `mongodb://mongodb:27017/product_db`.
+- API kết nối database bằng URI `mongodb://nammongodb:27017/product_db`.
 - Compose đợi MongoDB healthy rồi mới khởi động API.
 - Cả hai service đều có healthcheck và chính sách tự khởi động lại khi gặp sự cố.
 
@@ -94,11 +102,13 @@ docker compose down -v
 File `.env` không được commit lên Git. Cấu hình dùng khi Node.js chạy trực tiếp từ VS Code:
 
 ```env
-PORT=3000
+PORT=3002
 MONGODB_URI=mongodb://127.0.0.1:27017/product_db
 ```
 
-Khi API chạy trên máy host, MongoDB phải có thể truy cập tại `127.0.0.1:27017`. Khi chạy bằng Compose, cấu hình này được ghi đè tự động bằng hostname service `mongodb`.
+Khi API chạy trên máy host, MongoDB phải có thể truy cập tại `127.0.0.1:27017`.
+Khi chạy bằng Compose, cấu hình này được ghi đè tự động bằng hostname container
+`nammongodb`.
 
 ### Cài đặt và chạy
 
@@ -115,9 +125,26 @@ Hoặc chạy chế độ thông thường:
 npm start
 ```
 
-API mặc định: `http://localhost:3000`.
+Nếu chạy bằng Docker Compose với file `.env.example`, API là
+`http://localhost:3002`. Hãy dùng đúng địa chỉ này trong Postman; cổng `3000`
+hoặc `3001` có thể thuộc ứng dụng/container khác trên cùng máy.
 
-## 5. Danh sách API
+## 5. Kiểm tra dữ liệu trong `nammongodb`
+
+Liệt kê sản phẩm mới nhất trước (thay vì thứ tự tự nhiên của collection):
+
+```bash
+docker exec nammongodb mongosh product_db --quiet --eval \
+  'db.products.find().sort({createdAt: -1}).toArray()'
+```
+
+Xác nhận API đang dùng đúng container và database:
+
+```bash
+curl http://localhost:3002/api/health
+```
+
+## 6. Danh sách API
 
 | Method | Endpoint | Chức năng |
 | --- | --- | --- |
@@ -128,18 +155,18 @@ API mặc định: `http://localhost:3000`.
 | `PUT` | `/api/products/:pid` | Cập nhật Product |
 | `DELETE` | `/api/products/:pid` | Xóa Product |
 
-## 6. Kiểm thử bằng curl
+## 7. Kiểm thử bằng curl
 
 ### Kiểm tra API
 
 ```bash
-curl http://localhost:3000/api/health
+curl http://localhost:3002/api/health
 ```
 
 ### Tạo Product
 
 ```bash
-curl -X POST http://localhost:3000/api/products \
+curl -X POST http://localhost:3002/api/products \
   -H 'Content-Type: application/json' \
   -d '{"pid":"P001","pname":"Laptop","price":15000000,"quantity":10}'
 ```
@@ -147,19 +174,19 @@ curl -X POST http://localhost:3000/api/products \
 ### Lấy tất cả Product
 
 ```bash
-curl http://localhost:3000/api/products
+curl http://localhost:3002/api/products
 ```
 
 ### Lấy Product theo pid
 
 ```bash
-curl http://localhost:3000/api/products/P001
+curl http://localhost:3002/api/products/P001
 ```
 
 ### Cập nhật Product
 
 ```bash
-curl -X PUT http://localhost:3000/api/products/P001 \
+curl -X PUT http://localhost:3002/api/products/P001 \
   -H 'Content-Type: application/json' \
   -d '{"pname":"Laptop Gaming","price":18000000,"quantity":8}'
 ```
@@ -167,10 +194,10 @@ curl -X PUT http://localhost:3000/api/products/P001 \
 ### Xóa Product
 
 ```bash
-curl -X DELETE http://localhost:3000/api/products/P001
+curl -X DELETE http://localhost:3002/api/products/P001
 ```
 
-## 7. Cấu trúc Product
+## 8. Cấu trúc Product
 
 | Thuộc tính | Kiểu | Quy tắc |
 | --- | --- | --- |
@@ -181,7 +208,7 @@ curl -X DELETE http://localhost:3000/api/products/P001
 
 MongoDB tự tạo `_id`. Mongoose tự quản lý thêm `createdAt` và `updatedAt`.
 
-## 8. CI/CD với Docker Hub
+## 9. CI/CD với Docker Hub
 
 ### Test script dùng trong CI
 

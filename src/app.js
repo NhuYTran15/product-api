@@ -12,12 +12,21 @@ app.use(express.json());
 
 app.get('/api/health', (req, res) => {
   const isMongoConnected = mongoose.connection.readyState === 1;
+  const mongoConnection = isMongoConnected
+    ? {
+        status: 'healthy',
+        host: mongoose.connection.host,
+        database: mongoose.connection.name,
+      }
+    : {
+        status: 'unhealthy',
+      };
 
   res.status(isMongoConnected ? 200 : 503).json({
     status: isMongoConnected ? 'healthy' : 'unhealthy',
     services: {
       api: 'healthy',
-      mongodb: isMongoConnected ? 'healthy' : 'unhealthy',
+      mongodb: mongoConnection,
     },
   });
 });
