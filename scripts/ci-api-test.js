@@ -1,9 +1,10 @@
 const assert = require('node:assert/strict');
+require('dotenv').config();
 
-const apiBaseUrl = (process.env.API_BASE_URL || 'http://127.0.0.1:3000').replace(
-  /\/$/,
-  ''
-);
+const apiBaseUrl = (
+  process.env.API_BASE_URL ||
+  `http://127.0.0.1:${process.env.PORT || 3000}`
+).replace(/\/$/, '');
 const productsUrl = `${apiBaseUrl}/api/products`;
 const product = {
   pid: `CI-${Date.now()}-${process.pid}`,
